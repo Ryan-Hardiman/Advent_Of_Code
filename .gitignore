@@ -4,5 +4,4 @@
 .httr-oauth
 .DS_Store
 .quarto
-^.*get_aoc.R$
 get_aoc.R
