@@ -5,17 +5,18 @@ library(rlang)
 library(memoise)
 data <-get_aoc(7,2015)
 
-fns <- data |>str_extract("\\w+$")#|>map(~.x|>gsub(pat ="(.+)",rep ="`\\1`"))
+
+fns <- data |>str_extract("\\w+$")
 vars <- data |>str_extract("(?:(?! ->).)+")|>str_extract_all("[^A-Z ]+")|>map(~.x|>gsub(pat ="(.+)",rep ="`\\1`"))
 operator <- data|>str_extract("[A-Z]+")|>replace_na("SET")
 
 #Binary Operators 
-NOT    <- (function(myx){2^myx%%2})
-AND    <- (function(myx,myy){((myx+myy)==2)*1})
-OR     <- (function(myx,myy){((myx+myy)>=1)*1})
-RSHIFT <- (function(myx,quant){myx|>lag(to_int(quant))|>replace_na(0)})
-LSHIFT <- (function(myx,quant){myx|>lead(to_int(quant))|>replace_na(0)})
-SET    <- (function(myx){myx})
+NOT    <- function(myx){2^myx%%2}
+AND    <- function(myx,myy){((myx+myy)==2)*1}
+OR     <- function(myx,myy){((myx+myy)>=1)*1}
+RSHIFT <- function(myx,quant){myx|>lag(to_int(quant))|>replace_na(0)}
+LSHIFT <- function(myx,quant){myx|>lead(to_int(quant))|>replace_na(0)}
+SET    <- function(myx){myx}
 
 #Conversions
 to_binary <- function(myx){rev(1*as.logical(intToBits(myx)[1:16]))}
@@ -26,7 +27,7 @@ to_int <- function(myx){(myx*2^(16:1-1))|>sum()}
 #to_int(to_binary(12345))
 
 mem_eval_tidy <- memoise(function(xyz){print(xyz);eval_tidy(xyz)})
-fn_fatory <- function(name,vars,op){
+fn_factory <- function(name,vars,op){
 
   eval(parse(text =
                paste0(
@@ -36,13 +37,13 @@ fn_fatory <- function(name,vars,op){
 
 }
 
-make_nums <- function(x){
-  eval(parse(text = paste0(x, "<<-to_binary(", str_extract(x,"\\d+"),")")))
+make_nums <- function(vars){
+  vars|>unlist()|>str_extract("`\\d+`")|>unique()|>na.omit()|>walk(\(x) eval(parse(text = paste0(x, "<<-to_binary(", str_extract(x,"\\d+"),")"))))
 }
 
-vars|>unlist()|>str_extract("`\\d+`")|>unique()|>na.omit()|>walk(make_nums)
+make_nums(vars)
 
-pwalk(list(fns, vars, operator),fn_fatory)
+pwalk(list(fns, vars, operator),fn_factory)
 
 
 
@@ -52,15 +53,15 @@ part_1
 
 
 
-rm(list =setdiff(ls(),c("OR", "SET","AND","LSHIFT", "RSHIFT","NOT", "fns", "vars", "operator","fn_fatory", "get_aoc","data", "mem_eval_tidy","make_nums","to_binary","to_int")))
+rm(list =setdiff(ls(),c("OR", "SET","AND","LSHIFT", "RSHIFT","NOT", "fns", "vars", "operator","fn_factory", "get_aoc","data", "mem_eval_tidy","make_nums","to_binary","to_int")))
 #Add new data in
 data <- c(data,"16076 -> b")
 #Repeat above
-fns <- data |>str_extract("\\w+$")#|>map(~.x|>gsub(pat ="(.+)",rep ="`\\1`"))
+fns <- data |>str_extract("\\w+$")
 vars <- data |>str_extract("(?:(?! ->).)+")|>str_extract_all("[^A-Z ]+")|>map(~.x|>gsub(pat ="(.+)",rep ="`\\1`"))
 operator <- data|>str_extract("[A-Z]+")|>replace_na("SET")
 vars|>unlist()|>str_extract("`\\d+`")|>unique()|>na.omit()|>walk(make_nums)
-pwalk(list(fns, vars, operator),fn_fatory)
+pwalk(list(fns, vars, operator),fn_factory)
 
 #Need to re-create memoised function 
 mem_eval_tidy <- memoise(function(xyz){print(xyz);eval_tidy(xyz)})
