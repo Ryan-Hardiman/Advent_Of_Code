@@ -5,3 +5,5 @@
 .DS_Store
 .quarto
 get_aoc.R
+input
+input/*
