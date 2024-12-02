@@ -3,7 +3,6 @@ library(tidyverse)
 data<-get_aoc(2)
 data<- data|>str_extract_all("\\d+")|>lapply(as.numeric)
 
-tst<-clipr::read_clip()|>str_extract_all("\\d+")|>lapply(as.numeric)
 check <- function(x){
   all(head(x,-1)-tail(x,-1)<0 & head(x,-1)-tail(x,-1)> -4 )|
     all(head(x,-1)-tail(x,-1)>0 & head(x,-1)-tail(x,-1)< 4 )
