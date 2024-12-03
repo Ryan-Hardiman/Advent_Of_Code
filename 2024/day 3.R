@@ -13,9 +13,7 @@ x|>str_extract_all("mul\\(\\d{1,3},\\d{1,3}\\)")|>
 part_2 <-function(x){
 x|>paste0(collapse="")|>
     str_remove_all("don't\\(\\).*?do\\(\\)|don't\\(\\).*?(?!do\\(\\))$")|>
-    str_extract_all("mul\\(\\d{1,3},\\d{1,3}\\)")|>
-    unlist()|>str_extract_all("\\d+")|>
-    map(~.x |>as.numeric()|>prod())|>unlist()|>sum()
+    part_1()
   }
 
 
