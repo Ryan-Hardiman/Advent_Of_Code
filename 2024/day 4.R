@@ -1,6 +1,5 @@
 source("get_aoc.R") #Pull input from website, prints input + stores it 
 library(tidyverse) #Almost always required
-library(unpivotr)
 data<- get_aoc(4,2024)
  
 to_matrix <- function(data){ matrix(data|>strsplit("")|>unlist(),nrow = nchar(data[[1]]),ncol = length(data))} #get data as character matrix
