@@ -1,7 +1,7 @@
 source("get_aoc.R") #Pull input from website, prints input + stores it 
 library(tidyverse) #Almost always required
+library(gmp) #values get very big so required
 data<- get_aoc(7,2024)
-tst <- clipr::read_clip()
 
 get_targets <- function(x){x|>str_extract("\\d+")|>lapply(as.numeric)}
 get_nums<-function(x){x|>str_extract_all(" \\d+")|>lapply(as.numeric)}
@@ -29,5 +29,5 @@ part_2 <-function(x){
 }
 
 #Answers:
-part_1(data) #
-part_2(data) #
+part_1(data) #5030892084481
+part_2(data) #91377448644679
