@@ -44,7 +44,7 @@ combine_rles<-function(rle_list){
 
 #For each value in an input RLE (acc), find the new mapped values (1 or two elements) 
 #Multiply by the previous count using multiply_rle_lengths 
-#Combine list of rle's using combine_rles 
+#Combine list of rle's using combine_rles.
 
 rules <- function(acc,nxt){ 
   map2(acc$lengths,
