@@ -62,6 +62,7 @@ cheat(x,2)
 
 
 part_2 <-function(x){#Already visited, no need to repeat
+cheat(x,20)
 }
 
 #Answers:
