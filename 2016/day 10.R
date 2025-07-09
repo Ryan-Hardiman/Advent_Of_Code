@@ -51,10 +51,6 @@ factory <- function(data, goal){
 }
 
 create_bot <- function(id, low_target, high_target, goal,env){
-<<<<<<< HEAD
-=======
- # print(paste("Creating", id, "-> low to", low_target, ", high to", high_target)) # ← ADD
->>>>>>> 6a18e3980515d123c04eb1efc110763154fe8f5a
   bot_env <- new.env(parent = emptyenv())
   bot_env$id <- id
   bot_env$vals <- integer(0) #Make it blank first.
