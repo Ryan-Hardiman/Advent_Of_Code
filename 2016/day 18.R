@@ -11,17 +11,9 @@ right <- function(vec){ lead(vec)|>replace_na(T)}
 
 is_safe <- function(x) { 
   lft <- left(x) 
-  rht <- right(x) 
-  pmap_lgl(
-    list(x, lft, rht),
-    \(cen, lft, rht) {
-      chk <- c(lft, cen, rht) 
-      all(chk == c(T, T, T))|
-        all(chk == c(F, T, F))|
-        all(chk == c(F, F, F))|
-        all(chk == c(T, F, T)) 
-      }) 
-  } 
+  rht <- right(x)
+  lft==rht
+} 
 
 count_safe <- function(x, distance) {
   vec <- to_lgl(x) 
