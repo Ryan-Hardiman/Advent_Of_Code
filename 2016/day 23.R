@@ -1,5 +1,6 @@
 source("get_aoc.R") #Pull input from website, prints input + stores it 
 library(tidyverse) #Almost always required
+library(crayon) #Fun console print
 data<- get_aoc(23,2016)
 
 #Mostly from day 12:
@@ -96,11 +97,16 @@ monorail <- function(x,eggs){
   env$e<-0
   env$d<-0 
   env$idx<-1 
-  env$fastpath <- vector("list") #Initialise an optimisation list. 
+  env$fastpath <- vector("list") #Used to short-cut executions for known operations (see "detect optimisations_below") 
+  
 
   #Get instructions 
   instrs <- get_instructions(x) %>%lapply(str_replace,"^c$","e")
   env$instrs <- instrs
+  
+  #Initialise optimisations 
+  env$fastpath <- detect_optimisations(env$instrs, env)
+  
   valid <- seq_along(instrs)
   while(env$idx %in% valid ){ 
     # Check for fastpath optimisation at current idx
@@ -112,16 +118,18 @@ monorail <- function(x,eggs){
       }
     }
     
-    if (!is.null(matched)) {
+    if (!is.null(matched)) {#Pure debug overkill but this is fun and ACTUALLY USEFUL!
+      if(length(matched)>4) print(matched)
       cat(sprintf(
-        "OPTIMISED: idx: %-4d | fastpath: (%d → %d) | a: %-5d | b: %-5d | e: %-5d | d: %-5d\n",
+        "%s idx: %-4d | instr: %-24s | a: %-10d | b: %-5d | e: %-6d | d: %-10d | %s\n",
+        green("OPTIMISED:"),
         env$idx,
-        matched$start,
-        matched$end,
+        sprintf("fastpath (%3d → %3d)", matched$start, matched$end),
         env$a,
         env$b,
         env$e,
-        env$d
+        env$d,
+        matched$name
       ))
       matched$fn(env)        # Run the optimized fast-path code
       next                   # Skip normal instruction handling
@@ -129,8 +137,9 @@ monorail <- function(x,eggs){
     
     
     
-    cat(sprintf( #Pure debug overkill
-      "---------: idx: %-4d | instr: %-15s | a: %-5d | b: %-5d | e: %-5d | d: %-5d\n",
+    cat(sprintf( #Pure debug overkill but this is fun and ACTUALLY USEFUL!
+      "%s idx: %-4d | instr: %-22s | a: %-10d | b: %-5d | e: %-6d | d: %-10d\n",
+      "EXECUTING:",
       env$idx,
       paste(env$instrs[[env$idx]], collapse = " "),
       env$a,
@@ -152,14 +161,18 @@ monorail <- function(x,eggs){
   return(env$a) 
 }
 
-
-#This is still slow - and I feel I cheated a bit by letting it run for ~2h.
-#Some have solved ALL aoc in <1s so theres more tricks to find..
-
 #Now for the fun part, detecting and using patterns to shortcut the number
 #of executions required.
 detect_optimisations <- function(instrs,env){
   optimisations <- vector("list")
+  matched_ranges <- vector("list")
+  
+  # Helper to check for overlap with already matched ranges
+  overlaps <- function(start, end) {
+    any(sapply(matched_ranges, function(r) {
+      max(start, r$start) <= min(end, r$end)
+    }))
+  }
   
   # --- Pattern 1: Multiplication loop ---
   #
@@ -167,15 +180,18 @@ detect_optimisations <- function(instrs,env){
   #   cpy b e      ; copy value of b into e
   #   inc a        ; increment a
   #   dec e        ; decrement e
-  #   jnz c -2     ; loop back to inc a while e != 0
+  #   jnz e -2     ; loop back to inc a while e != 0
   #   dec d        ; decrement d
   #   jnz d -5     ; outer loop: repeat the above loop d times
   #
   #This can be shortened to: 
   # a = a + b*d ; e  = 0 ; d = 0
   for (i in seq_len(length(instrs)-5)){
-    poss_patrn <- instrs[i:(i+5)]
+    start <- i
+    end <- i + 5
+    if (overlaps(start, end)) next
     
+    poss_patrn <- instrs[start:end]
     if(
       all(
         poss_patrn%>%lapply(pluck,1)%>%unlist() == 
@@ -186,16 +202,13 @@ detect_optimisations <- function(instrs,env){
       poss_patrn[[6]][2] == poss_patrn[[5]][2]
     ){
      tmp_b <- poss_patrn[[1]][2]
-     tmp_e <- poss_patrn[[1]][3]
      tmp_a <- poss_patrn[[2]][2]
      tmp_d <- poss_patrn[[5]][2]
      
-     #For Debug
-     cat("Matched pattern at idx", i, "\n")
-     
      optimisations[[length(optimisations)+1]] <- list(
-       start = i,
-       end = i+5,
+       name = "Multiplication", #First 3 for cat statement
+       start = start,
+       end = end,
        fn = function(env){
          assign("a", get_val(tmp_a, env) + get_val(tmp_b, env) * get_val(tmp_d, env), envir = env)
          assign("e",0,envir = env)
@@ -203,9 +216,103 @@ detect_optimisations <- function(instrs,env){
          assign("idx", env$idx+6,envir = env)
          }
      )
+     matched_ranges[[length(matched_ranges)+1]] <- list(start = start, end = end)
     }
-    
   }
+  
+  # --- Pattern 2: Addition loop ---
+  #
+  # Matches a loop of the form:
+  #   inc a        ; increment a
+  #   dec e        ; decrement e
+  #   jnz e -2     ; loop back to inc a while e != 0
+  #This can be shortened to:
+  # a = a + e ; e  = 0
+  for (i in seq_len(length(instrs)-2)){
+    start <- i
+    end <- i + 2
+    if (overlaps(start, end)) next
+
+    poss_patrn <- instrs[start:end]
+    if(
+      all(
+        poss_patrn%>%lapply(pluck,1)%>%unlist() ==
+        c("inc","dec","jnz")) &&
+      poss_patrn[[3]][3] == "-2" &&
+      poss_patrn[[2]][2] == poss_patrn[[3]][2]
+    ){
+      #print(poss_patrn)
+      tmp_add <- poss_patrn[[1]][2]
+      tmp_dec <- poss_patrn[[2]][2]
+
+      optimisations[[length(optimisations)+1]] <- list(
+        name = "Addition 1", #First 3 for cat statement
+        start = start,
+        end = end,
+        fn = function(env){
+          assign(tmp_add, get_val(tmp_add, env) + get_val(tmp_dec, env), envir = env)
+          assign(tmp_dec,0,envir = env)
+          assign("idx", env$idx+3,envir = env)
+        }
+      )
+      matched_ranges[[length(matched_ranges)+1]] <- list(start = start, end = end)
+    } 
+  }
+
+  # --- Pattern 3: Addition loop 2 ---
+  #
+  # Matches a loop of the form:
+  #   dec d        ; decrement d
+  #   inc e        ; increment e
+  #   jnz d -2     ; loop back to inc d while d != 0
+  #This can be shortened to:
+  # # e = e + d ; d  = 0
+  for (i in seq_len(length(instrs)-2)){
+    start <- i
+    end <- i + 2
+    if (overlaps(start, end)) next
+
+    poss_patrn <- instrs[start:end]
+    if(
+      all(
+        poss_patrn%>%lapply(pluck,1)%>%unlist() ==
+        c("dec","inc","jnz")) &&
+      poss_patrn[[3]][3] == "-2" &&
+      poss_patrn[[1]][2] == poss_patrn[[3]][2] &&
+      poss_patrn[[2]][2] != poss_patrn[[1]][2]
+    ){
+      tmp_dec <- poss_patrn[[1]][2]
+      tmp_add <- poss_patrn[[2]][2]
+
+      optimisations[[length(optimisations)+1]] <- list(
+        name = "Addition 2",
+        start = start,
+        end = end,
+        fn = function(env){
+          assign(tmp_add, get_val(tmp_add, env) + get_val(tmp_dec, env), envir = env)
+          assign(tmp_dec,0,envir = env)
+          assign("idx", env$idx+3,envir = env)
+        }
+      )
+      matched_ranges[[length(matched_ranges)+1]] <- list(start = start, end = end)
+    }
+  }
+
+#
+  #I can see that the next - full optimisation (for my input) is to handle 
+  # tlg e --> cpy -16 e --> jnz 1 e --> cpy a d --> cpy 0 a --> multiplication. 
+  
+  #This just takes a and multiplies it by b.
+  #Sets d to 0 
+  #Sets e to 0
+  
+  #There's some inner loop doing 12! and some additional part to make each 
+  # input unique. I feel that's a little too meta so I'll stop here. 
+  
+  
+  
+  
+      
   return(optimisations)
 }
 
