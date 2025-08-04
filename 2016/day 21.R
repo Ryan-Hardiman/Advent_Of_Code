@@ -86,13 +86,14 @@ part_2 <- function(x){
 instrs <- parse_data(x) 
 perms <- gtools::permutations(8,8,letters[1:8])
 
-#Set up for parrallell runs ! 
+# #Set up for parrallell runs ! 
 library(furrr)
 plan(multisession)
 
+tictoc::tic()
 out <- future_map(1:nrow(perms), \(i) {
   reduce(instrs, \(acc, nxt) {
-    do.call(nxt[1], args = list(nxt[-1]) |> flatten() |> append(list(acc)))
+    do.call(nxt[1], args = c(as.list(nxt[-1]), list(string = acc)))
   }, .init = perms[i, ]) |> paste0(collapse = "")
 },
 .options = furrr_options(globals = list(
@@ -109,7 +110,7 @@ out <- future_map(1:nrow(perms), \(i) {
 )),
 .progress = TRUE
 )
-
+tictoc::toc()
 perms[which(out == "fbgdceah"),] 
 }
 
