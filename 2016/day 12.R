@@ -86,4 +86,4 @@ x%>%monorail(T) #There is definitely a "trick" using some polynomial math.
 
 #Answers:
 part_1(data) # 318007
-part_2(data) # 
+part_2(data) # 9227661
