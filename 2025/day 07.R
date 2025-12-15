@@ -47,3 +47,13 @@ out <- solve_day7(data)
 # Answers
 out$splits          # Part 1: 1642
 sum(out$timelines)  # Part 2: 47274292756692
+
+microbenchmark::microbenchmark(
+  solve_day7(data),
+  times = 50
+)
+#Unit: milliseconds
+#expr                     min                      lq                    mean                  median
+#solve_day7(data) 7.115600999999999842771 7.206400999999999612555 7.698076819999999820254 7.276151000000000479417
+#uq                     max neval
+#7.434401000000000259149 16.86870100000000149976    50
